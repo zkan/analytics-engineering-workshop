@@ -1,15 +1,32 @@
 # Analytics Engineering Workshop
 
-Work in progress. This repo is the starter for a 1-day hands-on workshop: JaiDee Mart, a fictional family grocery on a Bangkok soi that delivers across five regions. The stack is dbt Core and DuckDB, on a laptop, with no cloud warehouse.
+This repo is the starter for a 1-day hands-on workshop. It is still a work in progress.
 
-What is here now:
+The workshop is built around JaiDee Mart, a fictional family grocery store on a Bangkok soi (side street) that delivers across five regions. You will use two tools: dbt Core, which turns SQL files into tested tables, and DuckDB, a small database that runs on your laptop. Everything runs locally, with no cloud data warehouse.
 
-- a Python generator for the raw shop tables
-- a dbt project skeleton that declares those tables as the `jaidee` source and runs a few generic tests
+## What is here so far
 
-Staging models, intermediate models, marts, and the quality scorecard are not built yet.
+- A Python generator that creates the raw shop tables.
+- A dbt project skeleton. It declares those tables as the `jaidee` source and runs a few generic tests on them.
 
-Python **3.14** is the version this repo is tested with. 3.15 is the newest stable Python, and it does not work: `dbt-core` 1.12.7 depends on `metricflow`, and the current `metricflow` releases require Python `<3.15`.
+Not built yet: the staging models, intermediate models, marts, and the quality scorecard.
+
+## Words used in this README
+
+- **Extract**: a snapshot of the shop's raw data, as the generator writes it.
+- **dbt source**: dbt's name for raw tables that come from outside dbt. Here, the source is called `jaidee`.
+- **Generic test**: a ready-made dbt check that you attach to a column or table.
+- **Smoke test**: a quick run that shows the setup works from end to end.
+- **Virtual environment** (venv, or virtualenv): a private folder of Python packages for this project only, so it does not clash with anything else on your laptop.
+- **`PATH`**: the list of folders your terminal searches when you type a command.
+- **Make**: a tool that runs the shortcut commands defined in `Makefile`, such as `make setup`.
+- **Dev container**: a ready-made Linux environment that VS Code runs for you, with Python already installed.
+- **Seed**: a starting number for the random data. The same seed gives everyone the same data.
+- **Grain**: what one row in a table stands for.
+
+## Which Python version
+
+This repo is tested with Python **3.14**. Python 3.15 is the newest stable release, but it does not work here: `dbt-core` 1.12.7 depends on `metricflow`, and the current `metricflow` releases require Python `<3.15`.
 
 ## Files and folders
 
@@ -35,7 +52,7 @@ Python **3.14** is the version this repo is tested with. 3.15 is the newest stab
 
 ## Getting started
 
-Install Python 3.14 and make sure the `python3.14` command is on your `PATH`. From the repo root:
+Install Python 3.14 and make sure the `python3.14` command is on your `PATH`. Then open a terminal in the repo root (the top folder of this repo) and run:
 
 ```bash
 make setup
@@ -44,19 +61,23 @@ make data-clean
 make build
 ```
 
-`make check` is the prework check. Each line is `[OK]` or `[FAIL]`. A failure tells you the next command to run.
+`make check` is the prework check. It confirms your laptop is ready. Each line says `[OK]` or `[FAIL]`, and a failure tells you which command to run next.
 
-`make data-clean` writes the extract used by the smoke test. `make build` installs `dbt_utils` and runs `dbt build`. That build passes on the clean extract.
+`make data-clean` writes the clean extract that the smoke test uses. `make build` installs `dbt_utils` and runs `dbt build`. On the clean extract, that build passes.
 
-`make data` writes the workshop extract at the same teaching scale. `make build` after `make data` is expected to fail some source tests. Use `make data-clean` when you want the green smoke test again.
+### Clean extract or workshop extract
 
-Generator tests:
+`make data` writes the workshop extract, at the same teaching scale. If you run `make build` after `make data`, some source tests are expected to fail. To get the passing smoke test back, run `make data-clean`.
+
+### Run the generator tests
 
 ```bash
 make test
 ```
 
-The same steps without Make:
+### Without Make
+
+If you do not have Make, run the same steps by hand. The first three lines create a virtual environment in `.venv`, turn it on, and install the pinned packages.
 
 ```bash
 python3.14 -m venv .venv
@@ -69,9 +90,11 @@ dbt deps
 dbt build
 ```
 
-dbt does not read `profiles.yml` from the project directory unless `DBT_PROFILES_DIR` points here. The Makefile sets that for its dbt targets. The path inside `profiles.yml` is relative to the `profiles.yml` file.
+dbt does not read `profiles.yml` (the file that tells dbt how to connect to the database) from the project folder unless `DBT_PROFILES_DIR` points here. The `export DBT_PROFILES_DIR=.` line does that, and the Makefile sets it for its own dbt targets. The path inside `profiles.yml` is relative to the `profiles.yml` file itself.
 
-On Windows, use the dev container in `.devcontainer` (VS Code: Reopen in Container) and then run the same commands. The container image is Python 3.14.
+### On Windows
+
+Use the dev container in `.devcontainer` (in VS Code: Reopen in Container), then run the same commands inside it. The container image uses Python 3.14.
 
 ## Data
 
@@ -82,11 +105,13 @@ JaiDee Mart sells in Thai baht. The extract covers 1 April 2025 through 30 Septe
 | `teaching` | Default. Sized for a laptop dbt build | `make data` or `make data-clean` |
 | `large` | Bigger extract for a later compute exercise | `make data-large` |
 
-Add `--clean` for the smoke-test extract. Without it, the generator writes the workshop extract.
+Add `--clean` to the generator command to get the smoke-test extract. Without it, the generator writes the workshop extract.
 
-The generator writes CSV files under `data/raw/` and loads them into `data/jaidee.duckdb` (schema `raw`). Open the CSVs when you want to look at a row. dbt reads the DuckDB file. Timestamp columns are text, so the clock values in the file are the values that get loaded.
+The generator writes CSV files under `data/raw/` and loads them into `data/jaidee.duckdb`, in the `raw` schema (a named group of tables inside the database). Open the CSVs when you want to look at a single row. dbt reads the DuckDB file, not the CSVs. Timestamp columns are stored as text, so the clock values in the file are exactly the values that get loaded.
 
-The script prints the row count of each table when it finishes.
+When the script finishes, it prints the row count of each table.
+
+Each table and its grain:
 
 | Table | Grain |
 | - | - |
@@ -99,4 +124,4 @@ The script prints the row count of each table when it finishes.
 | `payments` | One payment event. `status` is succeeded, failed, or refunded. `amount_thb` is baht |
 | `reviews` | One score, from 1 to 5, after an order |
 
-These files are generated. They are not committed.
+These files are generated on your laptop. They are not committed to the repo.
