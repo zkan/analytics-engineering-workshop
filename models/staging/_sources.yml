@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: jaidee
+    description: Raw JaiDee Mart tables in the local DuckDB file.
+    schema: raw
+    tables:
+      - name: customers
+        description: One row per customer signup.
+        columns:
+          - name: customer_id
+            data_tests:
+              - unique
+              - not_null
+      - name: orders
+        description: Order headers. Amounts are Thai baht.
+        columns:
+          - name: order_id
+            data_tests:
+              - unique
+              - not_null
+          - name: customer_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: "source('jaidee', 'customers')"
+                    field: customer_id
+      - name: order_items
+        description: One row per product line on an order.
+      - name: products
+        description: Products the shop sells.
+      - name: stores
+        description: Stores that take and fulfill orders.
+      - name: deliveries
+        description: Delivery attempts.
+      - name: payments
+        description: Payment and refund events. Amounts are Thai baht.
+      - name: reviews
+        description: Scores left after an order.
