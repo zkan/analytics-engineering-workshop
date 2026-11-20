@@ -1,55 +1,44 @@
-PYTHON_VERSION := $(shell cat .python-version)
-PYTHON ?= python$(PYTHON_VERSION)
-VENV := .venv
-BIN := $(VENV)/bin
-
 export DBT_PROFILES_DIR := $(abspath .)
 
-.PHONY: setup data data-clean data-large build test check
+.PHONY: setup data data-clean data-large build test check require-uv
 
-$(BIN)/python:
-	@echo "No virtualenv yet. From the repo root run: make setup"
-	@exit 1
-
-setup:
-	@command -v $(PYTHON) >/dev/null 2>&1 || { \
-		echo "Python $(PYTHON_VERSION) is required, and '$(PYTHON)' is not on PATH."; \
-		echo "Install Python $(PYTHON_VERSION), then run make setup again."; \
+require-uv:
+	@command -v uv >/dev/null 2>&1 || { \
+		echo "[FAIL] uv"; \
+		echo "       uv is not installed."; \
+		echo "       macOS and Linux: curl -LsSf https://astral.sh/uv/install.sh | sh"; \
+		echo "       Windows (PowerShell): powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""; \
+		echo "       Then open a new terminal and, from the repo root, run: make setup"; \
 		exit 1; \
 	}
-	@$(PYTHON) -c "import sys; need=tuple(int(p) for p in '$(PYTHON_VERSION)'.split('.')[:2]); raise SystemExit(0 if sys.version_info[:2]==need else 1)" || { \
-		echo "Python $(PYTHON_VERSION) is required."; \
-		$(PYTHON) --version; \
-		exit 1; \
-	}
-	$(PYTHON) -m venv $(VENV)
-	$(BIN)/python -m pip install --upgrade pip
-	$(BIN)/python -m pip install -r requirements.txt
+
+setup: require-uv
+	uv sync --locked
 	@echo "Setup complete. Next: make check"
 
-data: $(BIN)/python
-	$(BIN)/python -m jaidee_mart.generate --seed 42 --scale teaching
+data: require-uv
+	uv run --locked python -m jaidee_mart.generate --seed 42 --scale teaching
 
-data-clean: $(BIN)/python
-	$(BIN)/python -m jaidee_mart.generate --seed 42 --scale teaching --clean
+data-clean: require-uv
+	uv run --locked python -m jaidee_mart.generate --seed 42 --scale teaching --clean
 
-data-large: $(BIN)/python
-	$(BIN)/python -m jaidee_mart.generate --seed 42 --scale large
+data-large: require-uv
+	uv run --locked python -m jaidee_mart.generate --seed 42 --scale large
 
-build: $(BIN)/python
+build: require-uv
 	@test -f data/jaidee.duckdb || { \
 		echo "No data/jaidee.duckdb. Run 'make data-clean' for the smoke test, or 'make data' for the workshop extract."; \
 		exit 1; \
 	}
-	@$(BIN)/python -c "import duckdb; c=duckdb.connect('data/jaidee.duckdb', read_only=True); c.execute('select 1 from raw.orders limit 1')" || { \
+	@uv run --locked python -c "import duckdb; c=duckdb.connect('data/jaidee.duckdb', read_only=True); c.execute('select 1 from raw.orders limit 1')" || { \
 		echo "data/jaidee.duckdb has no raw.orders table. Run 'make data-clean' or 'make data'."; \
 		exit 1; \
 	}
-	$(BIN)/dbt deps
-	$(BIN)/dbt build
+	uv run --locked dbt deps
+	uv run --locked dbt build
 
-test: $(BIN)/python
-	$(BIN)/pytest
+test: require-uv
+	uv run --locked pytest
 
-check: $(BIN)/python
-	$(BIN)/python scripts/check_prework.py
+check: require-uv
+	uv run --locked python scripts/check_prework.py

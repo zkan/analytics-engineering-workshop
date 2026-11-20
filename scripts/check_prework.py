@@ -3,20 +3,24 @@
 
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
-def pinned(package: str) -> str:
-    for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped.startswith(f"{package}=="):
-            return stripped.split("==", 1)[1]
-    raise SystemExit(f"requirements.txt does not pin {package}")
+def pins() -> dict[str, str]:
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        data = tomllib.load(handle)
+    found = {}
+    for spec in data["project"]["dependencies"] + data["dependency-groups"]["dev"]:
+        name, version = spec.split("==", 1)
+        found[name] = version
+    return found
 
 
 def expected_python() -> tuple[int, int]:
@@ -50,21 +54,47 @@ def run(command: list[str]) -> subprocess.CompletedProcess[str]:
     )
 
 
+def check_uv() -> int:
+    if shutil.which("uv") is None:
+        print("[FAIL] uv")
+        print("       uv is not installed.")
+        print("       macOS and Linux: curl -LsSf https://astral.sh/uv/install.sh | sh")
+        print("       Windows (PowerShell): powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\"")
+        print("       Then open a new terminal and, from the repo root, run: make setup")
+        return 1
+    try:
+        version = run(["uv", "--version"])
+    except FileNotFoundError:
+        version = None
+    text = "" if version is None else ANSI.sub("", version.stdout + "\n" + version.stderr).strip()
+    match = re.search(r"uv ([0-9][^\s]*)", text)
+    if version is not None and version.returncode == 0 and match:
+        print(f"[OK]   uv {match.group(1)}")
+        return 0
+    print("[FAIL] uv")
+    print("       uv is installed, but `uv --version` did not run.")
+    print("       Reinstall it, then open a new terminal and run: make setup")
+    if text:
+        print("       " + text.splitlines()[-1])
+    return 1
+
+
 def main() -> int:
-    failures = 0
+    failures = check_uv()
     major, minor = expected_python()
     running = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     if sys.version_info[:2] != (major, minor):
         failures += 1
         print(f"[FAIL] Python {running}")
         print(f"       This workshop uses Python {major}.{minor}.")
-        print("       Install that version, then from the repo root run: make setup")
+        print("       From the repo root run: uv python install && make setup")
     else:
         print(f"[OK]   Python {running}")
 
+    versions = pins()
     dbt_bin = tool("dbt")
-    expected_core = pinned("dbt-core")
-    expected_adapter = pinned("dbt-duckdb")
+    expected_core = versions["dbt-core"]
+    expected_adapter = versions["dbt-duckdb"]
     try:
         version = run([dbt_bin, "--version"])
     except FileNotFoundError:

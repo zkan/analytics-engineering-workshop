@@ -1,5 +1,5 @@
 {
   "name": "JaiDee Mart workshop",
   "image": "mcr.microsoft.com/devcontainers/python:3.14",
-  "postCreateCommand": "python -m pip install -r requirements.txt"
+  "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh && . \"$HOME/.local/bin/env\" && uv sync --locked"
 }

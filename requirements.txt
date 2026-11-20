@@ -1,5 +1,0 @@
-# Python 3.14. Python 3.15 cannot install dbt-core 1.12.7 (no metricflow build).
-dbt-core==1.12.7
-dbt-duckdb==1.11.1
-duckdb==2.0.1
-pytest==9.2.0

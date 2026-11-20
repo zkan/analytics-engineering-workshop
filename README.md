@@ -17,6 +17,7 @@ Not built yet: the staging models, intermediate models, marts, and the quality s
 - **dbt source**: dbt's name for raw tables that come from outside dbt. Here, the source is called `jaidee`.
 - **Generic test**: a ready-made dbt check that you attach to a column or table.
 - **Smoke test**: a quick run that shows the setup works from end to end.
+- **uv**: a program that installs this project's Python packages, and Python itself when needed, using a lockfile so everyone gets the same versions.
 - **Virtual environment** (venv, or virtualenv): a private folder of Python packages for this project only, so it does not clash with anything else on your laptop.
 - **`PATH`**: the list of folders your terminal searches when you type a command.
 - **Make**: a tool that runs the shortcut commands defined in `Makefile`, such as `make setup`.
@@ -32,27 +33,42 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 
 | Name | Description |
 | - | - |
-| `.devcontainer/devcontainer.json` | Dev container definition. Python 3.14, then `pip install -r requirements.txt` |
-| `.github/workflows/ci.yml` | GitHub Actions workflow. Installs the pinned packages, runs pytest, generates the clean extract, then `dbt deps` and `dbt build` |
+| `.devcontainer/devcontainer.json` | Dev container definition. Python 3.14. On create, installs uv and runs `uv sync --locked` |
+| `.github/workflows/ci.yml` | GitHub Actions workflow. Installs uv 0.13.9, runs `uv sync --locked`, runs pytest, generates the clean extract, then `dbt deps` and `dbt build` |
 | `.gitignore` | Ignores the virtualenv, dbt build folders, and generated data |
-| `.python-version` | Python version used by `make setup` and the prework check |
+| `.python-version` | Python version uv uses for this project. The prework check reads it too |
 | `jaidee_mart/` | Generator package. Run it with `python -m jaidee_mart.generate` |
 | `models/staging/_sources.yml` | dbt source `jaidee` for the eight raw tables, plus a few generic tests |
-| `scripts/check_prework.py` | Prints OK or FAIL for the Python version, the dbt version, and `dbt debug` |
+| `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
 | `tests/` | pytest tests for the generator |
 | `dbt_project.yml` | dbt project file |
 | `packages.yml` | Pins `dbt_utils` |
 | `package-lock.yml` | Lockfile written by `dbt deps` |
 | `profiles.yml` | Local DuckDB profile. No secrets. The database path is `data/jaidee.duckdb` |
 | `pytest.ini` | Puts the repo root on the pytest import path |
-| `requirements.txt` | Pinned Python packages |
+| `pyproject.toml` | Names the Python version and the pinned packages. pytest is in the dev group |
+| `uv.lock` | Lockfile written by uv. `uv sync --locked` installs these exact packages |
 | `Makefile` | Setup, generate, dbt build, pytest, and the prework check |
 | `LICENSE` | MIT license |
 | `README.md` | This file |
 
 ## Getting started
 
-Install Python 3.14 and make sure the `python3.14` command is on your `PATH`. Then open a terminal in the repo root (the top folder of this repo) and run:
+Install uv first. This repo was checked with uv 0.13.9. If Python 3.14 is not already installed, uv downloads it for you.
+
+macOS and Linux:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Close the terminal and open it again so `uv` is on your `PATH`. Then open a terminal in the repo root (the top folder of this repo) and run:
 
 ```bash
 make setup
@@ -60,6 +76,8 @@ make check
 make data-clean
 make build
 ```
+
+`make setup` runs `uv sync --locked`. That creates the `.venv` folder and installs the locked packages. `--locked` means "use `uv.lock` as it is committed, and stop if it does not match."
 
 `make check` is the prework check. It confirms your laptop is ready. Each line says `[OK]` or `[FAIL]`, and a failure tells you which command to run next.
 
@@ -77,24 +95,22 @@ make test
 
 ### Without Make
 
-If you do not have Make, run the same steps by hand. The first three lines create a virtual environment in `.venv`, turn it on, and install the pinned packages.
+If you do not have Make, run the same steps by hand. `uv run` uses the project's virtual environment, so you do not turn it on yourself.
 
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+uv sync --locked
 export DBT_PROFILES_DIR=.
-python scripts/check_prework.py
-python -m jaidee_mart.generate --seed 42 --scale teaching --clean
-dbt deps
-dbt build
+uv run python scripts/check_prework.py
+uv run python -m jaidee_mart.generate --seed 42 --scale teaching --clean
+uv run dbt deps
+uv run dbt build
 ```
 
 dbt does not read `profiles.yml` (the file that tells dbt how to connect to the database) from the project folder unless `DBT_PROFILES_DIR` points here. The `export DBT_PROFILES_DIR=.` line does that, and the Makefile sets it for its own dbt targets. The path inside `profiles.yml` is relative to the `profiles.yml` file itself.
 
 ### On Windows
 
-Use the dev container in `.devcontainer` (in VS Code: Reopen in Container), then run the same commands inside it. The container image uses Python 3.14.
+Install uv with the PowerShell command above, or use the dev container in `.devcontainer` (in VS Code: Reopen in Container) and then run the same commands inside it. The container installs uv when it is created. The image uses Python 3.14.
 
 ## Data
 
