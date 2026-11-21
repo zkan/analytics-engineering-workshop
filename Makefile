@@ -1,6 +1,6 @@
 DBT_DIR := jaidee
 
-.PHONY: setup data data-clean data-large build test check require-uv
+.PHONY: setup data data-clean data-large build test check app require-uv
 
 require-uv:
 	@command -v uv >/dev/null 2>&1 || { \
@@ -42,3 +42,6 @@ test: require-uv
 
 check: require-uv
 	uv run --locked python scripts/check_prework.py
+
+app: require-uv
+	uv run --locked streamlit run app/streamlit_app.py $(STREAMLIT_ARGS)
