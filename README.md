@@ -7,7 +7,7 @@ The workshop is built around JaiDee Mart, a fictional family grocery store on a 
 ## What is here so far
 
 - A Python generator that creates the raw shop tables.
-- A dbt project skeleton. It declares those tables as the `jaidee` source and runs a few generic tests on them.
+- A dbt project skeleton, in the `jaidee` folder. It declares those tables as the `jaidee` source and runs a few generic tests on them.
 
 Not built yet: the staging models, intermediate models, marts, and the quality scorecard.
 
@@ -37,14 +37,10 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 | `.github/workflows/ci.yml` | GitHub Actions workflow. Installs uv 0.13.9, runs `uv sync --locked`, runs pytest, generates the clean extract, then `dbt deps` and `dbt build` |
 | `.gitignore` | Ignores the virtualenv, dbt build folders, and generated data |
 | `.python-version` | Python version uv uses for this project. The prework check reads it too |
+| `jaidee/` | The dbt project. Holds `dbt_project.yml`, `packages.yml`, `package-lock.yml`, `profiles.yml` (local DuckDB, no secrets), and `models/staging/_sources.yml` |
 | `jaidee_mart/` | Generator package. Run it with `python -m jaidee_mart.generate` |
-| `models/staging/_sources.yml` | dbt source `jaidee` for the eight raw tables, plus a few generic tests |
 | `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
 | `tests/` | pytest tests for the generator |
-| `dbt_project.yml` | dbt project file |
-| `packages.yml` | Pins `dbt_utils` |
-| `package-lock.yml` | Lockfile written by `dbt deps` |
-| `profiles.yml` | Local DuckDB profile. No secrets. The database path is `data/jaidee.duckdb` |
 | `pytest.ini` | Puts the repo root on the pytest import path |
 | `pyproject.toml` | Names the Python version and the pinned packages. pytest is in the dev group |
 | `uv.lock` | Lockfile written by uv. `uv sync --locked` installs these exact packages |
@@ -99,14 +95,14 @@ If you do not have Make, run the same steps by hand. `uv run` uses the project's
 
 ```bash
 uv sync --locked
-export DBT_PROFILES_DIR=.
+export DBT_PROFILES_DIR=jaidee
 uv run python scripts/check_prework.py
 uv run python -m jaidee_mart.generate --seed 42 --scale teaching --clean
-uv run dbt deps
-uv run dbt build
+uv run dbt deps --project-dir jaidee --profiles-dir jaidee
+uv run dbt build --project-dir jaidee --profiles-dir jaidee
 ```
 
-dbt does not read `profiles.yml` (the file that tells dbt how to connect to the database) from the project folder unless `DBT_PROFILES_DIR` points here. The `export DBT_PROFILES_DIR=.` line does that, and the Makefile sets it for its own dbt targets. The path inside `profiles.yml` is relative to the `profiles.yml` file itself.
+Run these from the repo root. `DBT_PROFILES_DIR=jaidee` tells dbt to read `jaidee/profiles.yml`. `--project-dir jaidee` tells dbt the project is that folder. The Makefile sets the same two paths for its dbt commands. The database path inside `profiles.yml` is `data/jaidee.duckdb`. dbt opens that path from the repo root, which is also where the generator writes `data/`.
 
 ### On Windows
 

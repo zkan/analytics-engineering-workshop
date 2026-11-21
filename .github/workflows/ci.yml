@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      DBT_PROFILES_DIR: ${{ github.workspace }}
+      DBT_PROFILES_DIR: ${{ github.workspace }}/jaidee
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install uv
@@ -27,6 +27,6 @@ jobs:
       - name: Generate clean data
         run: uv run --locked python -m jaidee_mart.generate --seed 42 --scale teaching --clean
       - name: dbt deps
-        run: uv run --locked dbt deps
+        run: uv run --locked dbt deps --project-dir jaidee --profiles-dir jaidee
       - name: dbt build
-        run: uv run --locked dbt build
+        run: uv run --locked dbt build --project-dir jaidee --profiles-dir jaidee

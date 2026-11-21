@@ -10,6 +10,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DBT_DIR = ROOT / "jaidee"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -44,7 +45,7 @@ def tool(name: str) -> str:
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    env["DBT_PROFILES_DIR"] = str(ROOT)
+    env["DBT_PROFILES_DIR"] = str(DBT_DIR)
     return subprocess.run(
         command,
         cwd=ROOT,
@@ -131,7 +132,16 @@ def main() -> int:
 
     (ROOT / "data").mkdir(exist_ok=True)
     try:
-        debug = run([dbt_bin, "debug"])
+        debug = run(
+            [
+                dbt_bin,
+                "debug",
+                "--project-dir",
+                str(DBT_DIR),
+                "--profiles-dir",
+                str(DBT_DIR),
+            ]
+        )
     except FileNotFoundError:
         debug = None
     debug_text = "" if debug is None else ANSI.sub("", debug.stdout + "\n" + debug.stderr)

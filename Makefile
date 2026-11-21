@@ -1,4 +1,5 @@
-export DBT_PROFILES_DIR := $(abspath .)
+DBT_DIR := jaidee
+export DBT_PROFILES_DIR := $(abspath $(DBT_DIR))
 
 .PHONY: setup data data-clean data-large build test check require-uv
 
@@ -34,8 +35,8 @@ build: require-uv
 		echo "data/jaidee.duckdb has no raw.orders table. Run 'make data-clean' or 'make data'."; \
 		exit 1; \
 	}
-	uv run --locked dbt deps
-	uv run --locked dbt build
+	uv run --locked dbt deps --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR)
+	uv run --locked dbt build --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR)
 
 test: require-uv
 	uv run --locked pytest
