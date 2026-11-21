@@ -38,7 +38,7 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 | `.github/workflows/ci.yml` | GitHub Actions workflow. Installs uv 0.13.9, runs `uv sync --locked`, runs pytest, generates the clean extract, then `dbt deps` and `dbt build` |
 | `.gitignore` | Ignores the virtualenv, dbt build folders, and generated data |
 | `.python-version` | Python version uv uses for this project. The prework check reads it too |
-| `jaidee/` | The dbt project. Holds `dbt_project.yml`, `packages.yml`, `package-lock.yml`, `profiles.yml` (local DuckDB, no secrets), and `models/staging/_sources.yml` |
+| `jaidee/` | The dbt project. Holds `dbt_project.yml`, `profiles.yml` (local DuckDB, no secrets), and `models/staging/_sources.yml` |
 | `jaidee_mart/` | Generator package. Run it with `python -m jaidee_mart.generate` |
 | `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
 | `tests/` | pytest tests for the generator |
@@ -74,7 +74,7 @@ make build
 
 `make check` is the prework check. It confirms your laptop is ready. Each line says `[OK]` or `[FAIL]`, and a failure tells you which command to run next.
 
-`make data-clean` writes the clean extract that the smoke test uses. `make build` installs `dbt_utils` and runs `dbt build` from inside the `jaidee` folder. On the clean extract, that build passes.
+`make data-clean` writes the clean extract that the smoke test uses. `make build` runs `dbt deps` and `dbt build` from inside the `jaidee` folder. On the clean extract, that build passes.
 
 ### Clean extract or workshop extract
 
