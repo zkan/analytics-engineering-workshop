@@ -1,0 +1,8 @@
+jaidee_mart:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../data/jaidee.duckdb
+      schema: main
+      threads: 4

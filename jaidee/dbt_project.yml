@@ -1,0 +1,15 @@
+name: jaidee_mart
+version: "1.0.0"
+config-version: 2
+
+profile: jaidee_mart
+
+require-dbt-version: [">=1.12.0", "<1.13.0"]
+
+model-paths: ["models"]
+test-paths: ["dbt_tests"]
+
+clean-targets:
+  - target
+  - dbt_packages
+  - logs
