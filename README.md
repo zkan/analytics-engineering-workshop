@@ -77,7 +77,7 @@ make build
 
 `make check` is the prework check. It confirms your laptop is ready. Each line says `[OK]` or `[FAIL]`, and a failure tells you which command to run next.
 
-`make data-clean` writes the clean extract that the smoke test uses. `make build` installs `dbt_utils` and runs `dbt build`. On the clean extract, that build passes.
+`make data-clean` writes the clean extract that the smoke test uses. `make build` installs `dbt_utils` and runs `dbt build` from inside the `jaidee` folder. On the clean extract, that build passes.
 
 ### Clean extract or workshop extract
 
@@ -91,22 +91,23 @@ make test
 
 ### Without Make
 
-If you do not have Make, run the same steps by hand. `uv run` uses the project's virtual environment, so you do not turn it on yourself.
+If you do not have Make, run the same steps by hand from the repo root. `uv sync` creates `.venv`. The `source` line turns that virtual environment on, so the `dbt` command is available. Then change into the `jaidee` folder before the dbt commands. dbt reads `profiles.yml` in that folder. You do not set `DBT_PROFILES_DIR`.
 
 ```bash
 uv sync --locked
-export DBT_PROFILES_DIR=jaidee
 uv run python scripts/check_prework.py
 uv run python -m jaidee_mart.generate --seed 42 --scale teaching --clean
-uv run dbt deps --project-dir jaidee --profiles-dir jaidee
-uv run dbt build --project-dir jaidee --profiles-dir jaidee
+source .venv/bin/activate
+cd jaidee
+dbt deps
+dbt build
 ```
 
-Run these from the repo root. `DBT_PROFILES_DIR=jaidee` tells dbt to read `jaidee/profiles.yml`. `--project-dir jaidee` tells dbt the project is that folder. The Makefile sets the same two paths for its dbt commands. The database path inside `profiles.yml` is `data/jaidee.duckdb`. dbt opens that path from the repo root, which is also where the generator writes `data/`.
+`uv run` also works from inside `jaidee`, because it finds the `pyproject.toml` and `.venv` in the repo root. For example: `cd jaidee && uv run dbt build`.
 
 ### On Windows
 
-Install uv with the PowerShell command above, or use the dev container in `.devcontainer` (in VS Code: Reopen in Container) and then run the same commands inside it. The container installs uv when it is created. The image uses Python 3.14.
+Install uv with the PowerShell command above, or use the dev container in `.devcontainer` (in VS Code: Reopen in Container). The container is Linux, so the same commands work there, including `cd jaidee` before `dbt deps` and `dbt build`. The container installs uv when it is created. The image uses Python 3.14.
 
 ## Data
 
@@ -119,7 +120,7 @@ JaiDee Mart sells in Thai baht. The extract covers 1 April 2025 through 30 Septe
 
 Add `--clean` to the generator command to get the smoke-test extract. Without it, the generator writes the workshop extract.
 
-The generator writes CSV files under `data/raw/` and loads them into `data/jaidee.duckdb`, in the `raw` schema (a named group of tables inside the database). Open the CSVs when you want to look at a single row. dbt reads the DuckDB file, not the CSVs. Timestamp columns are stored as text, so the clock values in the file are exactly the values that get loaded.
+The generator writes CSV files under `data/raw/` and loads them into `data/jaidee.duckdb`, in the `raw` schema (a named group of tables inside the database). That `data` folder is at the repo root. From inside `jaidee`, dbt opens it as `../data/jaidee.duckdb`. Open the CSVs when you want to look at a single row. dbt reads the DuckDB file, not the CSVs. Timestamp columns are stored as text, so the clock values in the file are exactly the values that get loaded.
 
 When the script finishes, it prints the row count of each table.
 

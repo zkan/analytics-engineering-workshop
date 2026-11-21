@@ -3,6 +3,6 @@ jaidee_mart:
   outputs:
     dev:
       type: duckdb
-      path: data/jaidee.duckdb
+      path: ../data/jaidee.duckdb
       schema: main
       threads: 4

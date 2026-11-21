@@ -43,13 +43,11 @@ def tool(name: str) -> str:
     return name
 
 
-def run(command: list[str]) -> subprocess.CompletedProcess[str]:
-    env = os.environ.copy()
-    env["DBT_PROFILES_DIR"] = str(DBT_DIR)
+def run(command: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
-        cwd=ROOT,
-        env=env,
+        cwd=cwd or ROOT,
+        env=os.environ.copy(),
         text=True,
         capture_output=True,
     )
@@ -132,16 +130,7 @@ def main() -> int:
 
     (ROOT / "data").mkdir(exist_ok=True)
     try:
-        debug = run(
-            [
-                dbt_bin,
-                "debug",
-                "--project-dir",
-                str(DBT_DIR),
-                "--profiles-dir",
-                str(DBT_DIR),
-            ]
-        )
+        debug = run([dbt_bin, "debug"], cwd=DBT_DIR)
     except FileNotFoundError:
         debug = None
     debug_text = "" if debug is None else ANSI.sub("", debug.stdout + "\n" + debug.stderr)
