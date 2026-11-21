@@ -6,8 +6,8 @@ require-uv:
 	@command -v uv >/dev/null 2>&1 || { \
 		echo "[FAIL] uv"; \
 		echo "       uv is not installed."; \
-		echo "       macOS and Linux: curl -LsSf https://astral.sh/uv/install.sh | sh"; \
-		echo "       Windows (PowerShell): powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""; \
+		echo "       macOS, Linux, or WSL: curl -LsSf https://astral.sh/uv/install.sh | sh"; \
+		echo "       On Windows, use the dev container or WSL. Plain PowerShell is not supported."; \
 		echo "       Then open a new terminal and, from the repo root, run: make setup"; \
 		exit 1; \
 	}

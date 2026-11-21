@@ -57,8 +57,8 @@ def check_uv() -> int:
     if shutil.which("uv") is None:
         print("[FAIL] uv")
         print("       uv is not installed.")
-        print("       macOS and Linux: curl -LsSf https://astral.sh/uv/install.sh | sh")
-        print("       Windows (PowerShell): powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\"")
+        print("       macOS, Linux, or WSL: curl -LsSf https://astral.sh/uv/install.sh | sh")
+        print("       On Windows, use the dev container or WSL. Plain PowerShell is not supported.")
         print("       Then open a new terminal and, from the repo root, run: make setup")
         return 1
     try:

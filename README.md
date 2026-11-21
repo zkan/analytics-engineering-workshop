@@ -17,8 +17,9 @@ Not built yet: the staging models, intermediate models, marts, and the quality s
 - **dbt source**: dbt's name for raw tables that come from outside dbt. Here, the source is called `jaidee`.
 - **Generic test**: a ready-made dbt check that you attach to a column or table.
 - **Smoke test**: a quick run that shows the setup works from end to end.
-- **uv**: a program that installs this project's Python packages, and Python itself when needed, using a lockfile so everyone gets the same versions.
 - **Virtual environment** (venv, or virtualenv): a private folder of Python packages for this project only, so it does not clash with anything else on your laptop.
+- **Lockfile**: a file that records the exact version of every package, so every install gets the same ones.
+- **uv**: a program that installs this project's Python packages, and Python itself when needed. It uses a lockfile, so everyone gets the same versions.
 - **`PATH`**: the list of folders your terminal searches when you type a command.
 - **Make**: a tool that runs the shortcut commands defined in `Makefile`, such as `make setup`.
 - **Dev container**: a ready-made Linux environment that VS Code runs for you, with Python already installed.
@@ -50,21 +51,17 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 
 ## Getting started
 
-Install uv first. This repo was checked with uv 0.13.9. If Python 3.14 is not already installed, uv downloads it for you.
+First, install uv. This repo was checked with uv 0.13.9. If you do not have Python 3.14 yet, uv downloads it for you.
 
-macOS and Linux:
+On macOS, Linux, or WSL:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Windows (PowerShell):
+On Windows, see [On Windows](#on-windows) first.
 
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-Close the terminal and open it again so `uv` is on your `PATH`. Then open a terminal in the repo root (the top folder of this repo) and run:
+After the install, close your terminal and open a new one, so `uv` is on your `PATH`. In the new terminal, go to the repo root (the top folder of this repo) and run:
 
 ```bash
 make setup
@@ -91,7 +88,11 @@ make test
 
 ### Without Make
 
-If you do not have Make, run the same steps by hand from the repo root. `uv sync` creates `.venv`. The `source` line turns that virtual environment on, so the `dbt` command is available. Then change into the `jaidee` folder before the dbt commands. dbt reads `profiles.yml` in that folder. You do not set `DBT_PROFILES_DIR`.
+If you do not have Make, run the same steps by hand, starting from the repo root:
+
+- `uv sync` creates `.venv`.
+- The `source` line turns that virtual environment on, so the `dbt` command is available.
+- `cd jaidee` moves you into the dbt project folder before the dbt commands. dbt reads `profiles.yml` in that folder, so you do not need to set `DBT_PROFILES_DIR`.
 
 ```bash
 uv sync --locked
@@ -103,11 +104,14 @@ dbt deps
 dbt build
 ```
 
-`uv run` also works from inside `jaidee`, because it finds the `pyproject.toml` and `.venv` in the repo root. For example: `cd jaidee && uv run dbt build`.
+You can also use `uv run` from inside `jaidee`. It finds the `pyproject.toml` and `.venv` in the repo root. For example: `cd jaidee && uv run dbt build`.
 
 ### On Windows
 
-Install uv with the PowerShell command above, or use the dev container in `.devcontainer` (in VS Code: Reopen in Container). The container is Linux, so the same commands work there, including `cd jaidee` before `dbt deps` and `dbt build`. The container installs uv when it is created. The image uses Python 3.14.
+On Windows, use the dev container or WSL. Plain PowerShell is not supported, because `make` and `source .venv/bin/activate` do not work there.
+
+- **Dev container**: open the repo in VS Code and choose Reopen in Container (the setup is in `.devcontainer`). The container is Linux, installs uv when it is created, and uses Python 3.14. Run every command in this README in the container's terminal.
+- **WSL** (Windows Subsystem for Linux): open a WSL terminal, clone the repo inside WSL, and follow the macOS and Linux steps above.
 
 ## Data
 
@@ -120,7 +124,7 @@ JaiDee Mart sells in Thai baht. The extract covers 1 April 2025 through 30 Septe
 
 Add `--clean` to the generator command to get the smoke-test extract. Without it, the generator writes the workshop extract.
 
-The generator writes CSV files under `data/raw/` and loads them into `data/jaidee.duckdb`, in the `raw` schema (a named group of tables inside the database). That `data` folder is at the repo root. From inside `jaidee`, dbt opens it as `../data/jaidee.duckdb`. Open the CSVs when you want to look at a single row. dbt reads the DuckDB file, not the CSVs. Timestamp columns are stored as text, so the clock values in the file are exactly the values that get loaded.
+The generator writes CSV files under `data/raw/` and loads them into `data/jaidee.duckdb`, in the `raw` schema (a named group of tables inside the database). The `data` folder sits at the repo root, so from inside `jaidee`, dbt opens the file as `../data/jaidee.duckdb`. Open the CSVs when you want to look at a single row. dbt reads the DuckDB file, not the CSVs. Timestamp columns are stored as text, so the clock values in the file are exactly the values that get loaded.
 
 When the script finishes, it prints the row count of each table.
 
