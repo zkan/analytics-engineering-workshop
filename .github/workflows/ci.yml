@@ -23,7 +23,7 @@ jobs:
       - name: Unit tests
         run: uv run --locked pytest
       - name: Generate clean data
-        run: uv run --locked python -m jaidee_mart.generate --seed 42 --scale teaching --clean
+        run: uv run --locked python -m generator.generate --seed 42 --scale teaching --clean
       - name: dbt deps
         working-directory: jaidee
         run: uv run --locked dbt deps

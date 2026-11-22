@@ -40,7 +40,7 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 | `.python-version` | Python version uv uses for this project. The prework check reads it too |
 | `app/streamlit_app.py` | Streamlit starter page. A title and a short note that the dashboard is built in the lab |
 | `jaidee/` | The dbt project. Holds `dbt_project.yml`, `profiles.yml` (local DuckDB, no secrets), and `models/staging/_sources.yml` |
-| `jaidee_mart/` | Generator package. Run it with `python -m jaidee_mart.generate` |
+| `generator/` | Generator package. Run it with `python -m generator.generate` |
 | `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
 | `tests/` | pytest tests for the generator |
 | `pytest.ini` | Puts the repo root on the pytest import path |
@@ -106,7 +106,7 @@ If you do not have Make, run the same steps by hand, starting from the repo root
 ```bash
 uv sync --locked
 uv run python scripts/check_prework.py
-uv run python -m jaidee_mart.generate --seed 42 --scale teaching --clean
+uv run python -m generator.generate --seed 42 --scale teaching --clean
 source .venv/bin/activate
 cd jaidee
 dbt deps

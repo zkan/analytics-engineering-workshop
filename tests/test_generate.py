@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import duckdb
 import pytest
 
-from jaidee_mart.generate import (
+from generator.generate import (
     END_DATE,
     SCALES,
     START_DATE,
@@ -475,7 +475,7 @@ def test_cli_writes_clean_extract(tmp_path):
         [
             sys.executable,
             "-m",
-            "jaidee_mart.generate",
+            "generator.generate",
             "--seed",
             "42",
             "--scale",

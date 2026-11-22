@@ -17,13 +17,13 @@ setup: require-uv
 	@echo "Setup complete. Next: make check"
 
 data: require-uv
-	uv run --locked python -m jaidee_mart.generate --seed 42 --scale teaching
+	uv run --locked python -m generator.generate --seed 42 --scale teaching
 
 data-clean: require-uv
-	uv run --locked python -m jaidee_mart.generate --seed 42 --scale teaching --clean
+	uv run --locked python -m generator.generate --seed 42 --scale teaching --clean
 
 data-large: require-uv
-	uv run --locked python -m jaidee_mart.generate --seed 42 --scale large
+	uv run --locked python -m generator.generate --seed 42 --scale large
 
 build: require-uv
 	@test -f data/jaidee.duckdb || { \
