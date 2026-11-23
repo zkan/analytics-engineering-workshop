@@ -36,15 +36,14 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 
 | Name | Description |
 | - | - |
-| `.devcontainer/devcontainer.json` | Dev container definition. Python 3.14. On create, installs uv and runs `uv sync --locked`. Forwards port 4213 for the DuckDB UI |
+| `.devcontainer/devcontainer.json` | Dev container definition. Python 3.14. On create, installs uv and runs `uv sync --locked`, which installs the DuckDB CLI. Forwards port 4213 for the DuckDB UI |
 | `.github/workflows/ci.yml` | GitHub Actions workflow. Installs uv 0.13.9, runs `uv sync --locked`, runs pytest, generates the clean extract, then `dbt deps` and `dbt build` |
 | `.gitignore` | Ignores the virtualenv, dbt build folders, and generated data |
 | `.python-version` | Python version uv uses for this project. The prework check reads it too |
 | `app/streamlit_app.py` | Streamlit starter page. A title and a short note that the dashboard is built in the lab |
 | `jaidee/` | The dbt project. Holds `dbt_project.yml`, `profiles.yml` (local DuckDB, no secrets), and `models/staging/_sources.yml` |
 | `generator/` | Generator package. Run it with `python -m generator.generate` |
-| `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
-| `scripts/duckdb_ui.py` | Starts the DuckDB UI on a read-only copy of the workshop database |
+| `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the DuckDB CLI version, the dbt version, and `dbt debug` |
 | `tests/` | pytest tests for the generator |
 | `pytest.ini` | Puts the repo root on the pytest import path |
 | `pyproject.toml` | Names the Python version and the pinned packages. pytest is in the dev group |
@@ -102,36 +101,37 @@ make app
 
 The DuckDB UI is a SQL notebook in your browser. Your queries run on your laptop against the workshop database, so you can try out a query or check a model you just built.
 
-Run this from the repo root, after `make data-clean` or `make data`:
+`make setup` installs the DuckDB command line tool at version 1.5.6, the same DuckDB this workshop uses. Run this from the repo root, after `make data-clean` or `make data`:
 
 ```bash
 make ui
 ```
 
-Open http://localhost:4213 in your browser. Keep that terminal running while you use the UI. To stop it, press Ctrl+C in that terminal.
+That runs `duckdb -ui data/jaidee.duckdb`. Open http://localhost:4213 in your browser. Keep that terminal running while you use the UI. To stop it, press Ctrl+D in that terminal. Ctrl+C does not close the UI. DuckDB prints `Interrupted, use Ctrl+D to exit`, and the file stays open.
 
-Only one program at a time can write to `data/jaidee.duckdb`, and even a program that only reads the file blocks that writer. So `make ui` does not keep the file open. Instead, it attaches a read-only copy under the name `jaidee` and refreshes that copy about a second after `make build` finishes. This means you can leave the UI running while you build.
+Close the UI before you run `make build`, or any other dbt command. DuckDB lets only one program use `data/jaidee.duckdb` while that program is writing. When the build finishes, start `make ui` again.
 
-In the first notebook cell, run:
+In a notebook cell, run:
 
 ```sql
-USE jaidee;
 select * from raw.orders limit 10;
 ```
 
-`raw.orders` is a source table that comes with the starter. Models you add in the lab are built in the `main` schema. After `make build`, check one with:
+`raw.orders` is a source table that comes with the starter. Models you add in the lab are built in the `main` schema. After a build, start the UI again and check one with:
 
 ```sql
 select * from main.<model_name> limit 10;
 ```
 
-Replace `<model_name>` with your model's file name, without `.sql`. After each build, run the cell again to see the new results. You do not need to restart `make ui`. Because the copy is read-only, changes you make in the notebook are not saved to the workshop database.
+Replace `<model_name>` with your model's file name, without `.sql`.
 
 The notebook page loads from https://ui.duckdb.org through the DuckDB 1.5 `ui` extension. Your SQL still runs on your laptop, and the shop data stays there. You need internet to open the page. The first time you run `make ui`, it also downloads the signed `ui` extension, so that first start needs internet too.
 
 #### If the UI will not open
 
-**Port already in use.** Something else is already using port 4213, often a UI you started earlier. Either open http://localhost:4213, or stop the UI in the old terminal. To use a different port:
+**Could not set lock on file.** The UI still has `data/jaidee.duckdb` open. Press Ctrl+D in that terminal, then run `make build` again. Start `make ui` again when the build finishes.
+
+**Port already in use.** Something else is already using port 4213, often a UI you started earlier. Either open http://localhost:4213, or stop the UI in the old terminal. To use a different port, DuckDB reads `ui_local_port`:
 
 ```bash
 ui_local_port=4214 make ui
@@ -139,9 +139,7 @@ ui_local_port=4214 make ui
 
 Then open http://localhost:4214. In the dev container, only port 4213 is forwarded to your browser. If you use a different port there, add it in the Ports panel first.
 
-**Could not set lock on file.** Another program has `data/jaidee.duckdb` open. Close any other DuckDB shell, or wait until `dbt build` finishes, then try again. `make ui` locks the file only for the moment it copies it. If `make build` shows this error while the UI is open, the build ran at the same moment as that copy. Wait a second and run `make build` again.
-
-**The page is blank, or the command says it could not install the `ui` extension.** When the UI starts, the terminal says `DuckDB UI is at http://localhost:4213`. If the command stops before that line, the signed extension did not download. If you see that line but the page is blank, your network is blocking https://ui.duckdb.org. In both cases, connect to the internet and run `make ui` again. The shop data stays on your laptop either way.
+**The page is blank, or DuckDB says it could not install the `ui` extension.** When the UI starts, open http://localhost:4213. If the command stops before the page can load, the signed extension did not download. If the page is blank, your network is blocking https://ui.duckdb.org. In both cases, connect to the internet and run `make ui` again. The shop data stays on your laptop either way.
 
 ### Without Make
 
@@ -163,7 +161,7 @@ dbt build
 
 You can also use `uv run` from inside `jaidee`. It finds the `pyproject.toml` and `.venv` in the repo root. For example: `cd jaidee && uv run dbt build`.
 
-To open the DuckDB UI without Make, from the repo root: `uv run --locked python scripts/duckdb_ui.py`
+To open the DuckDB UI without Make, from the repo root, after `source .venv/bin/activate`: `duckdb -ui data/jaidee.duckdb`. Or, without activating the virtual environment: `uv run --locked duckdb -ui data/jaidee.duckdb`.
 
 ### On Windows
 

@@ -51,4 +51,4 @@ ui: require-uv
 		echo "No data/jaidee.duckdb. Run 'make data-clean' for the smoke test, or 'make data' for the workshop extract."; \
 		exit 1; \
 	}
-	uv run --locked python scripts/duckdb_ui.py
+	uv run --locked duckdb -ui data/jaidee.duckdb
