@@ -42,7 +42,7 @@ def test_ui_server_answers_and_picks_up_a_later_write(tmp_path):
         # from https://ui.duckdb.org and is not part of this check.
         with urllib.request.urlopen(f"http://localhost:{port}/info", timeout=10) as response:
             assert response.status == 200
-            assert response.headers["X-DuckDB-Version"] == "v2.0.1"
+            assert response.headers["X-DuckDB-Version"] == "v1.5.6"
         assert ui.con.execute("select order_id from jaidee.raw.orders").fetchall() == [(1,)]
 
         holder = subprocess.Popen(

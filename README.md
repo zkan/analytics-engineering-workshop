@@ -45,7 +45,6 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 | `generator/` | Generator package. Run it with `python -m generator.generate` |
 | `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
 | `scripts/duckdb_ui.py` | Starts the DuckDB UI on a read-only copy of the workshop database |
-| `vendor/duckdb-ui/` | The `ui` extension for DuckDB 2.0.1. DuckDB does not publish that file, so the repo includes the build |
 | `tests/` | pytest tests for the generator |
 | `pytest.ini` | Puts the repo root on the pytest import path |
 | `pyproject.toml` | Names the Python version and the pinned packages. pytest is in the dev group |
@@ -128,9 +127,7 @@ select * from main.<model_name> limit 10;
 
 Use the file name of your model, without `.sql`. Run the cell again after a build. You do not need to restart `make ui`. The copy is read-only, so a change you make in the notebook is not saved to the workshop database.
 
-The notebook page is loaded from https://ui.duckdb.org, which is the DuckDB 2.0 UI extension. Your SQL still runs on your laptop, and the shop data stays there. Opening the page needs internet.
-
-DuckDB 2.0.1 does not publish the `ui` extension (the download returns 404). This repo includes the extension file, and `make ui` allows that unsigned file to load in the UI process. `make build` does not.
+The notebook page is loaded from https://ui.duckdb.org, which is the DuckDB 1.5 UI extension. Your SQL still runs on your laptop, and the shop data stays there. Opening the page needs internet. The first `make ui` also downloads the signed `ui` extension, so that first start needs internet too.
 
 #### If the UI will not open
 
@@ -144,9 +141,7 @@ Then open http://localhost:4214. The dev container forwards port 4213. A differe
 
 **Could not set lock on file.** Another program has `data/jaidee.duckdb` open. Close the extra DuckDB shell, or wait until `dbt build` finishes, then try again. `make ui` only locks the file for the moment it copies it. If `make build` reports this while the UI is open, it caught that copy. Wait a second and run `make build` again.
 
-**The page is blank, or the browser cannot load it.** The terminal should say `DuckDB UI is at http://localhost:4213`. If it does and the page is blank, you are offline or https://ui.duckdb.org is blocked. Connect and reload the page.
-
-**Intel Mac.** The DuckDB UI does not support Intel Macs. Use the dev container, which is Linux.
+**The page is blank, or the command says it could not install the ui extension.** The terminal should say `DuckDB UI is at http://localhost:4213`. If the command stops before that, the signed extension did not download. If the page is blank after that, https://ui.duckdb.org is blocked. Connect and run `make ui` again. The shop data stays on your laptop either way.
 
 ### Without Make
 

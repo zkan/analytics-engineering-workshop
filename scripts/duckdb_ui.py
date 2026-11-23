@@ -2,23 +2,16 @@
 """Open the DuckDB UI on a read-only copy of the workshop database.
 
 DuckDB allows one writer on a database file, and a read-only opener blocks
-that writer too (https://duckdb.org/docs/2.0/connect/concurrency). The UI
+that writer too (https://duckdb.org/docs/1.5/connect/concurrency). The UI
 process therefore never keeps data/jaidee.duckdb open. It attaches a copy as
 jaidee and replaces that copy after the real file is free again, which is
 how `dbt build` can run while the notebook stays open.
 
-DuckDB 2.0.1 does not publish the ui extension: INSTALL ui returns HTTP 404
-for every platform (duckdb/duckdb#29187). The binaries in vendor/duckdb-ui
-are the v2.0.1 builds from duckdb/duckdb-ui commit b19dfd587f
-(workflow run 44850194047). They are unsigned, so this process allows
-unsigned extensions only when it has to load those files. The page assets
-still come from https://ui.duckdb.org. See
-https://duckdb.org/docs/2.0/core_extensions/ui.
+The ui extension is the signed build published for DuckDB 1.5.6. The first
+start downloads it. The page assets still come from https://ui.duckdb.org.
+See https://duckdb.org/docs/1.5/core_extensions/ui.
 """
 
-import gzip
-import hashlib
-import io
 import os
 import shutil
 import socket
@@ -32,22 +25,6 @@ import duckdb
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PORT = 4213
-VENDOR = ROOT / "vendor" / "duckdb-ui" / "2.0.1"
-# gzip sha256, then uncompressed sha256. Platforms follow DuckDB's names.
-EXTENSIONS = {
-    "linux_amd64": (
-        "3c2b84d5eef289a0c52abb298cd211db7919693aa5f8f35bdae6ec091c993607",
-        "c5ad530e558de3a3e6819f86bb247a98b72b1f548383eede45396dcc95f8cfb1",
-    ),
-    "linux_arm64": (
-        "9426f0b2de458b5b605061a6570014bfd82880b0ef9c9674b0e7632cc0baf84c",
-        "3da31ceae15b1d469b1e0857fd2b41220388448fce1acc70e949969679a50278",
-    ),
-    "osx_arm64": (
-        "fe018a67deaa8a79c2fef38405aea653c6d2cccf74995df195a4faa98aade335",
-        "13577bb06eeea04c91948406e28593a0d5e7e848200c3575fc670901aa4c3a09",
-    ),
-}
 
 
 class UIError(Exception):
@@ -71,50 +48,6 @@ def sql_literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def extension_file(platform: str) -> Path:
-    if platform not in EXTENSIONS:
-        supported = ", ".join(sorted(EXTENSIONS))
-        raise UIError(
-            f"The DuckDB UI extension in this repo has no build for {platform}.\n"
-            f"Included builds: {supported}.\n"
-            "DuckDB's UI does not support osx_amd64 (Intel Mac) or windows_arm64.\n"
-            "On an Intel Mac or on Windows, use the dev container. Windows can also use WSL."
-        )
-    gzip_sha, raw_sha = EXTENSIONS[platform]
-    cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-    cached = cache_root / "jaidee-ui" / "2.0.1" / platform / "ui.duckdb_extension"
-    if cached.is_file() and sha256_file(cached) == raw_sha:
-        return cached
-    packed = VENDOR / f"{platform}.duckdb_extension.gz"
-    if not packed.is_file():
-        raise UIError(
-            f"Missing {packed.relative_to(ROOT)}.\n"
-            "Re-clone the repo. The ui extension is part of the project."
-        )
-    if sha256_file(packed) != gzip_sha:
-        raise UIError(
-            f"{packed.relative_to(ROOT)} does not match its checksum.\n"
-            "Re-clone the repo."
-        )
-    cached.parent.mkdir(parents=True, exist_ok=True)
-    partial = cached.with_suffix(".partial")
-    with gzip.open(packed, "rb") as source, partial.open("wb") as target:
-        shutil.copyfileobj(source, target)
-    if sha256_file(partial) != raw_sha:
-        partial.unlink(missing_ok=True)
-        raise UIError("The ui extension did not unpack to the expected file.")
-    os.replace(partial, cached)
-    return cached
-
-
 def file_signature(path: Path) -> tuple:
     stat = path.stat()
     wal = Path(str(path) + ".wal")
@@ -127,11 +60,6 @@ def file_signature(path: Path) -> tuple:
 def is_lock_error(exc: BaseException) -> bool:
     text = str(exc).lower()
     return "could not set lock" in text or "conflicting lock" in text
-
-
-def extension_is_unpublished(exc: BaseException) -> bool:
-    text = str(exc)
-    return "Failed to download extension" in text and "ui" in text
 
 
 def copy_database(source: Path, dest: Path) -> tuple:
@@ -204,7 +132,6 @@ class WorkshopUI:
         self.database = database
         self.port = DEFAULT_PORT if port is None else port
         self.con: duckdb.DuckDBPyConnection | None = None
-        self.loaded_from = ""
         self._tmp: tempfile.TemporaryDirectory[str] | None = None
         self._work: Path | None = None
         self._snapshot: Path | None = None
@@ -243,8 +170,6 @@ class WorkshopUI:
         print("Leave this terminal open. make build in another terminal still works.")
         print("When the build finishes, run the query again.")
         print("Press Ctrl+C to stop.")
-        if self.loaded_from == "vendor":
-            print("Loaded the ui extension shipped in this repo (DuckDB 2.0.1 has no signed build).")
         maybe_open_browser(url)
 
     def serve(self) -> None:
@@ -278,22 +203,19 @@ class WorkshopUI:
             self._work = None
 
     def _open_connection(self) -> duckdb.DuckDBPyConnection:
-        trial = duckdb.connect()
-        platform = trial.execute("select platform from pragma_platform()").fetchone()[0]
+        connection = duckdb.connect()
         try:
-            trial.execute("INSTALL ui")
-            trial.execute("LOAD ui")
+            connection.execute("INSTALL ui")
+            connection.execute("LOAD ui")
         except duckdb.Error as exc:
-            trial.close()
-            if not extension_is_unpublished(exc):
-                raise
-            path = extension_file(platform)
-            connection = duckdb.connect(config={"allow_unsigned_extensions": True})
-            connection.execute(f"LOAD {sql_literal(str(path))}")
-            self.loaded_from = "vendor"
-            return connection
-        self.loaded_from = "repository"
-        return trial
+            connection.close()
+            raise UIError(
+                "Could not install the DuckDB ui extension.\n"
+                "The first run downloads it, so this needs internet.\n"
+                "Check your connection and run make ui again.\n"
+                f"{exc}"
+            ) from exc
+        return connection
 
     def _set_port(self) -> None:
         if port_is_open(self.port):
@@ -326,7 +248,7 @@ class WorkshopUI:
                     raise UIError(lock_message(self.database)) from exc
                 return False
             raise
-        # Options follow the alias. DuckDB 2.0 rejects `(READ_ONLY) AS name`.
+        # DuckDB 1.5: ATTACH 'file' AS name (READ_ONLY). Options follow the alias.
         verb = "ATTACH OR REPLACE" if self._snapshot is not None else "ATTACH"
         self.con.execute(f"{verb} {sql_literal(str(dest))} AS jaidee (READ_ONLY)")
         self.con.execute("USE jaidee")
