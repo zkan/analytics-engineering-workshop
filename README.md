@@ -24,7 +24,7 @@ Not built yet: the staging models, intermediate models, marts, and the quality s
 - **`PATH`**: the list of folders your terminal searches when you type a command.
 - **Make**: a tool that runs the shortcut commands defined in `Makefile`, such as `make setup`.
 - **Dev container**: a ready-made Linux environment that VS Code runs for you, with Python already installed.
-- **DuckDB UI**: a SQL notebook that opens in your browser and runs queries on DuckDB on your laptop.
+- **DuckDB UI**: a SQL notebook (a page where you type queries into cells and see the results below each one) that opens in your browser. Your queries run with DuckDB on your laptop.
 - **Seed**: a starting number for the random data. The same seed gives everyone the same data.
 - **Grain**: what one row in a table stands for.
 
@@ -100,17 +100,17 @@ make app
 
 ### Open the DuckDB UI
 
-The DuckDB UI is a SQL notebook in your browser. Queries run on your laptop, against the workshop database, so you can try a query or check a model you just built.
+The DuckDB UI is a SQL notebook in your browser. Your queries run on your laptop against the workshop database, so you can try out a query or check a model you just built.
 
-From the repo root, after `make data-clean` or `make data`:
+Run this from the repo root, after `make data-clean` or `make data`:
 
 ```bash
 make ui
 ```
 
-Open http://localhost:4213. Leave that terminal running. Stop the UI with Ctrl+C.
+Open http://localhost:4213 in your browser. Keep that terminal running while you use the UI. To stop it, press Ctrl+C in that terminal.
 
-DuckDB lets only one program at a time write `data/jaidee.duckdb`, and a program that has the file open read-only blocks the writer too. `make ui` does not keep that file open. It attaches a read-only copy under the name `jaidee`, then refreshes the copy about a second after `make build` finishes. Leave the UI running while you build.
+Only one program at a time can write to `data/jaidee.duckdb`, and even a program that only reads the file blocks that writer. So `make ui` does not keep the file open. Instead, it attaches a read-only copy under the name `jaidee` and refreshes that copy about a second after `make build` finishes. This means you can leave the UI running while you build.
 
 In the first notebook cell, run:
 
@@ -119,29 +119,29 @@ USE jaidee;
 select * from raw.orders limit 10;
 ```
 
-`raw.orders` is a source table that is already in the starter. A model you add in the lab is built in the `main` schema. After `make build`, check it with:
+`raw.orders` is a source table that comes with the starter. Models you add in the lab are built in the `main` schema. After `make build`, check one with:
 
 ```sql
 select * from main.<model_name> limit 10;
 ```
 
-Use the file name of your model, without `.sql`. Run the cell again after a build. You do not need to restart `make ui`. The copy is read-only, so a change you make in the notebook is not saved to the workshop database.
+Replace `<model_name>` with your model's file name, without `.sql`. After each build, run the cell again to see the new results. You do not need to restart `make ui`. Because the copy is read-only, changes you make in the notebook are not saved to the workshop database.
 
-The notebook page is loaded from https://ui.duckdb.org, which is the DuckDB 1.5 UI extension. Your SQL still runs on your laptop, and the shop data stays there. Opening the page needs internet. The first `make ui` also downloads the signed `ui` extension, so that first start needs internet too.
+The notebook page loads from https://ui.duckdb.org through the DuckDB 1.5 `ui` extension. Your SQL still runs on your laptop, and the shop data stays there. You need internet to open the page. The first time you run `make ui`, it also downloads the signed `ui` extension, so that first start needs internet too.
 
 #### If the UI will not open
 
-**Port already in use.** Something is already listening on port 4213, often a UI you started earlier. Open http://localhost:4213, or stop the old terminal. For a different port:
+**Port already in use.** Something else is already using port 4213, often a UI you started earlier. Either open http://localhost:4213, or stop the UI in the old terminal. To use a different port:
 
 ```bash
 ui_local_port=4214 make ui
 ```
 
-Then open http://localhost:4214. The dev container forwards port 4213. A different port is not forwarded until you add it in the Ports panel.
+Then open http://localhost:4214. In the dev container, only port 4213 is forwarded to your browser. If you use a different port there, add it in the Ports panel first.
 
-**Could not set lock on file.** Another program has `data/jaidee.duckdb` open. Close the extra DuckDB shell, or wait until `dbt build` finishes, then try again. `make ui` only locks the file for the moment it copies it. If `make build` reports this while the UI is open, it caught that copy. Wait a second and run `make build` again.
+**Could not set lock on file.** Another program has `data/jaidee.duckdb` open. Close any other DuckDB shell, or wait until `dbt build` finishes, then try again. `make ui` locks the file only for the moment it copies it. If `make build` shows this error while the UI is open, the build ran at the same moment as that copy. Wait a second and run `make build` again.
 
-**The page is blank, or the command says it could not install the ui extension.** The terminal should say `DuckDB UI is at http://localhost:4213`. If the command stops before that, the signed extension did not download. If the page is blank after that, https://ui.duckdb.org is blocked. Connect and run `make ui` again. The shop data stays on your laptop either way.
+**The page is blank, or the command says it could not install the `ui` extension.** When the UI starts, the terminal says `DuckDB UI is at http://localhost:4213`. If the command stops before that line, the signed extension did not download. If you see that line but the page is blank, your network is blocking https://ui.duckdb.org. In both cases, connect to the internet and run `make ui` again. The shop data stays on your laptop either way.
 
 ### Without Make
 
