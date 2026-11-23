@@ -1,6 +1,6 @@
 DBT_DIR := jaidee
 
-.PHONY: setup data data-clean data-large build test check app require-uv
+.PHONY: setup data data-clean data-large build test check app ui require-uv
 
 require-uv:
 	@command -v uv >/dev/null 2>&1 || { \
@@ -45,3 +45,10 @@ check: require-uv
 
 app: require-uv
 	uv run --locked streamlit run app/streamlit_app.py $(STREAMLIT_ARGS)
+
+ui: require-uv
+	@test -f data/jaidee.duckdb || { \
+		echo "No data/jaidee.duckdb. Run 'make data-clean' for the smoke test, or 'make data' for the workshop extract."; \
+		exit 1; \
+	}
+	uv run --locked python scripts/duckdb_ui.py
