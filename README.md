@@ -8,6 +8,7 @@ The workshop is built around JaiDee Mart, a fictional family grocery store on a 
 
 - A Python generator that creates the raw shop tables.
 - A dbt project skeleton, in the `jaidee` folder. It declares those tables as the `jaidee` source and runs a few generic tests on them.
+- A command that opens the DuckDB UI on the workshop database, so you can run a query and check a model.
 
 Not built yet: the staging models, intermediate models, marts, and the quality scorecard.
 
@@ -23,6 +24,7 @@ Not built yet: the staging models, intermediate models, marts, and the quality s
 - **`PATH`**: the list of folders your terminal searches when you type a command.
 - **Make**: a tool that runs the shortcut commands defined in `Makefile`, such as `make setup`.
 - **Dev container**: a ready-made Linux environment that VS Code runs for you, with Python already installed.
+- **DuckDB UI**: a SQL notebook (a page where you type queries into cells and see the results below each one) that opens in your browser. Your queries run with DuckDB on your laptop.
 - **Seed**: a starting number for the random data. The same seed gives everyone the same data.
 - **Grain**: what one row in a table stands for.
 
@@ -34,19 +36,19 @@ This repo is tested with Python **3.14**. Python 3.15 is the newest stable relea
 
 | Name | Description |
 | - | - |
-| `.devcontainer/devcontainer.json` | Dev container definition. Python 3.14. On create, installs uv and runs `uv sync --locked` |
+| `.devcontainer/devcontainer.json` | Dev container definition. Python 3.14. On create, installs uv and runs `uv sync --locked`, which installs the DuckDB CLI. Forwards port 4213 for the DuckDB UI |
 | `.github/workflows/ci.yml` | GitHub Actions workflow. Installs uv 0.13.9, runs `uv sync --locked`, runs pytest, generates the clean extract, then `dbt deps` and `dbt build` |
 | `.gitignore` | Ignores the virtualenv, dbt build folders, and generated data |
 | `.python-version` | Python version uv uses for this project. The prework check reads it too |
 | `app/streamlit_app.py` | Streamlit starter page. A title and a short note that the dashboard is built in the lab |
 | `jaidee/` | The dbt project. Holds `dbt_project.yml`, `profiles.yml` (local DuckDB, no secrets), and `models/staging/_sources.yml` |
 | `generator/` | Generator package. Run it with `python -m generator.generate` |
-| `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the dbt version, and `dbt debug` |
+| `scripts/check_prework.py` | Prints OK or FAIL for uv, the Python version, the DuckDB CLI version, the dbt version, and `dbt debug` |
 | `tests/` | pytest tests for the generator |
 | `pytest.ini` | Puts the repo root on the pytest import path |
 | `pyproject.toml` | Names the Python version and the pinned packages. pytest is in the dev group |
 | `uv.lock` | Lockfile written by uv. `uv sync --locked` installs these exact packages |
-| `Makefile` | Setup, generate, dbt build, pytest, and the prework check |
+| `Makefile` | Setup, generate, dbt build, pytest, the prework check, and the DuckDB UI |
 | `LICENSE` | MIT license |
 | `README.md` | This file |
 
@@ -95,6 +97,50 @@ make app
 
 `make app` starts the Streamlit page. Open http://localhost:8501. The page is a placeholder. You will build the dashboard in the lab.
 
+### Open the DuckDB UI
+
+The DuckDB UI is a SQL notebook in your browser. Your queries run on your laptop against the workshop database, so you can try out a query or check a model you just built.
+
+`make setup` installs the DuckDB command line tool at version 1.5.6, the same DuckDB this workshop uses. Run this from the repo root, after `make data-clean` or `make data`:
+
+```bash
+make ui
+```
+
+That runs `duckdb -ui data/jaidee.duckdb`. Open http://localhost:4213 in your browser. Keep that terminal running while you use the UI. To stop it, press Ctrl+D in that terminal. Ctrl+C does not close the UI. DuckDB prints `Interrupted, use Ctrl+D to exit`, and the file stays open.
+
+Close the UI before you run `make build`, or any other dbt command. DuckDB lets only one program use `data/jaidee.duckdb` while that program is writing. When the build finishes, start `make ui` again.
+
+In a notebook cell, run:
+
+```sql
+select * from raw.orders limit 10;
+```
+
+`raw.orders` is a source table that comes with the starter. Models you add in the lab are built in the `main` schema. After a build, start the UI again and check one with:
+
+```sql
+select * from main.<model_name> limit 10;
+```
+
+Replace `<model_name>` with your model's file name, without `.sql`.
+
+The notebook page loads from https://ui.duckdb.org through the DuckDB 1.5 `ui` extension. Your SQL still runs on your laptop, and the shop data stays there. You need internet to open the page. The first time you run `make ui`, it also downloads the signed `ui` extension, so that first start needs internet too.
+
+#### If the UI will not open
+
+**Could not set lock on file.** The UI still has `data/jaidee.duckdb` open. Press Ctrl+D in that terminal, then run `make build` again. Start `make ui` again when the build finishes.
+
+**Port already in use.** Something else is already using port 4213, often a UI you started earlier. Either open http://localhost:4213, or stop the UI in the old terminal. To use a different port, DuckDB reads `ui_local_port`:
+
+```bash
+ui_local_port=4214 make ui
+```
+
+Then open http://localhost:4214. In the dev container, only port 4213 is forwarded to your browser. If you use a different port there, add it in the Ports panel first.
+
+**The page is blank, or DuckDB says it could not install the `ui` extension.** When the UI starts, open http://localhost:4213. If the command stops before the page can load, the signed extension did not download. If the page is blank, your network is blocking https://ui.duckdb.org. In both cases, connect to the internet and run `make ui` again. The shop data stays on your laptop either way.
+
 ### Without Make
 
 If you do not have Make, run the same steps by hand, starting from the repo root:
@@ -114,6 +160,8 @@ dbt build
 ```
 
 You can also use `uv run` from inside `jaidee`. It finds the `pyproject.toml` and `.venv` in the repo root. For example: `cd jaidee && uv run dbt build`.
+
+To open the DuckDB UI without Make, from the repo root, after `source .venv/bin/activate`: `duckdb -ui data/jaidee.duckdb`. Or, without activating the virtual environment: `uv run --locked duckdb -ui data/jaidee.duckdb`.
 
 ### On Windows
 

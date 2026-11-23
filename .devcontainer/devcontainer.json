@@ -1,5 +1,12 @@
 {
   "name": "JaiDee Mart workshop",
   "image": "mcr.microsoft.com/devcontainers/python:3.14",
+  "forwardPorts": [4213],
+  "portsAttributes": {
+    "4213": {
+      "label": "DuckDB UI",
+      "onAutoForward": "notify"
+    }
+  },
   "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh && . \"$HOME/.local/bin/env\" && uv sync --locked"
 }

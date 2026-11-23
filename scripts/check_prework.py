@@ -128,6 +128,29 @@ def main() -> int:
             print(f"       Found dbt-core {found_core} and dbt-duckdb {found_adapter}.")
         print("       From the repo root run: make setup")
 
+    expected_duckdb = versions["duckdb"]
+    duckdb_bin = tool("duckdb")
+    try:
+        duckdb_version = run([duckdb_bin, "--version"])
+    except FileNotFoundError:
+        duckdb_version = None
+    duckdb_text = "" if duckdb_version is None else ANSI.sub("", duckdb_version.stdout + "\n" + duckdb_version.stderr)
+    duckdb_match = re.search(r"v?([0-9]+\.[0-9]+\.[0-9]+)", duckdb_text)
+    if (
+        duckdb_version is not None
+        and duckdb_version.returncode == 0
+        and duckdb_match is not None
+        and duckdb_match.group(1) == expected_duckdb
+    ):
+        print(f"[OK]   duckdb {duckdb_match.group(1)}")
+    else:
+        failures += 1
+        print("[FAIL] duckdb")
+        found_duckdb = duckdb_match.group(1) if duckdb_match else "not found"
+        print(f"       Expected the DuckDB CLI v{expected_duckdb}.")
+        print(f"       Found {found_duckdb}.")
+        print("       From the repo root run: make setup")
+
     (ROOT / "data").mkdir(exist_ok=True)
     try:
         debug = run([dbt_bin, "debug"], cwd=DBT_DIR)
